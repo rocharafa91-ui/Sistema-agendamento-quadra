@@ -5,3 +5,61 @@ O presente projeto tem como objetivo desenvolver um sistema de agendamento para 
 O sistema também contará com a disponibilidade de três espaços com churrasqueira para locação, permitindo que os usuários reservem áreas destinadas a confraternizações e eventos. Além disso, haverá integração com um bar local dentro do espaço, possibilitando a compra de produtos como cerveja, água, refrigerantes e sucos.
 
 O objetivo principal do projeto é facilitar o gerenciamento das reservas, melhorar a organização do espaço esportivo e proporcionar maior comodidade aos usuários, centralizando em um único sistema todas as opções de agendamento, locação de equipamentos e compra de produtos.
+
+
+
+uml
+
+Usuario
+- id
+- nome
+- email
+- telefone
+- fazerReserva()
+- alugarEquipamento()
+- comprarProduto()
+
+        |
+        | faz
+        v
+
+Reserva
+- id
+- data
+- horario
+- status
+- confirmar()
+- cancelar()
+
+Reserva --> Quadra
+Reserva --> EspacoLazer
+
+Quadra
+- id
+- nome
+- tipo
+- disponivel
+
+EspacoLazer
+- id
+- nome
+- capacidade
+- disponivel
+
+Equipamento
+- id
+- nome
+- tipo
+- disponivel
+
+Bar
+- id
+- nome
+
+Bar --> Produto
+
+Produto
+- id
+- nome
+- preco
+- estoque
