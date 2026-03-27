@@ -63,3 +63,5 @@ Produto
 - nome
 - preco
 - estoque
+
+<img width="1024" height="1536" alt="Diagrama de sistema de reservas" src="https://github.com/user-attachments/assets/fe94f464-cd70-4497-97c1-211b370af32f" />
