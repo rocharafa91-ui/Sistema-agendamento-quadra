@@ -41,10 +41,28 @@ class ReservaController extends Controller
             'status'          => ['nullable', Rule::in(Reserva::STATUS)],
         ]);
 
-        // Regra: precisa selecionar OU uma quadra OU um espaço de lazer
+        // Regra 1: precisa selecionar OU uma quadra OU um espaço de lazer
         if (empty($dados['quadra_id']) && empty($dados['espaco_lazer_id'])) {
             return back()->withInput()
                 ->withErrors(['quadra_id' => 'Selecione uma quadra ou um espaço de lazer.']);
+        }
+
+        // Regra 2: verificar conflito de horário (quadra OU espaço já reservados)
+        $conflito = $this->verificarConflito(
+            $dados['quadra_id'] ?? null,
+            $dados['espaco_lazer_id'] ?? null,
+            $dados['data'],
+            $dados['horario']
+        );
+
+        if ($conflito) {
+            $local = $conflito->quadra
+                ? "Quadra '{$conflito->quadra->nome}'"
+                : "Espaço '{$conflito->espacoLazer->nome}'";
+            return back()->withInput()->withErrors([
+                'horario' => "Conflito de horário! {$local} já tem reserva #{$conflito->id} " .
+                             "para {$dados['data']} às {$dados['horario']}."
+            ]);
         }
 
         $dados['status'] = $dados['status'] ?? 'pendente';
@@ -83,6 +101,24 @@ class ReservaController extends Controller
             'status'          => ['required', Rule::in(Reserva::STATUS)],
         ]);
 
+        // Validação de conflito (ignora a própria reserva no update)
+        $conflito = $this->verificarConflito(
+            $dados['quadra_id'] ?? null,
+            $dados['espaco_lazer_id'] ?? null,
+            $dados['data'],
+            $dados['horario'],
+            $reserva->id
+        );
+
+        if ($conflito) {
+            $local = $conflito->quadra
+                ? "Quadra '{$conflito->quadra->nome}'"
+                : "Espaço '{$conflito->espacoLazer->nome}'";
+            return back()->withInput()->withErrors([
+                'horario' => "Conflito de horário! {$local} já tem reserva #{$conflito->id}."
+            ]);
+        }
+
         $reserva->update($dados);
 
         return redirect()->route('reservas.index')
@@ -114,5 +150,41 @@ class ReservaController extends Controller
     {
         $reserva->cancelar();
         return back()->with('sucesso', "Reserva #{$reserva->id} cancelada.");
+    }
+
+    /**
+     * Verifica se já existe uma reserva (não-cancelada) para a mesma
+     * quadra/espaço, na mesma data e mesmo horário.
+     *
+     * @param  int|null $quadraId
+     * @param  int|null $espacoId
+     * @param  string   $data
+     * @param  string   $horario
+     * @param  int|null $ignorarReservaId  Útil no update (ignora a própria)
+     * @return Reserva|null
+     */
+    private function verificarConflito(
+        ?int $quadraId,
+        ?int $espacoId,
+        string $data,
+        string $horario,
+        ?int $ignorarReservaId = null
+    ): ?Reserva {
+        $query = Reserva::where('data', $data)
+            ->where('horario', $horario)
+            ->where('status', '!=', 'cancelada')
+            ->with(['quadra', 'espacoLazer']);
+
+        if ($quadraId) {
+            $query->where('quadra_id', $quadraId);
+        } elseif ($espacoId) {
+            $query->where('espaco_lazer_id', $espacoId);
+        }
+
+        if ($ignorarReservaId) {
+            $query->where('id', '!=', $ignorarReservaId);
+        }
+
+        return $query->first();
     }
 }
